@@ -72,6 +72,12 @@ Explore::Explore()
   search_ = frontier_exploration::FrontierSearch(costmap_client_.getCostmap(),
                                                  potential_scale_, gain_scale_,
                                                  min_frontier_size);
+  
+  curr_state = {0, 0};
+  target_state = {0, 0};
+  float step_size = 40;
+  int max_iterations = 1000;
+  rrt_detector_ = new Xplore::RRT(curr_state, max_iterations, step_size, costmap_client_.getCostmap());
 
   if (visualize_) {
     marker_array_publisher_ =
@@ -179,60 +185,74 @@ void Explore::visualizeFrontiers(
 void Explore::makePlan()
 {
   // find frontiers
+  auto costmap = costmap_client_.getCostmap();
   auto pose = costmap_client_.getRobotPose();
   // get frontiers sorted according to cost
-  auto frontiers = search_.searchFrom(pose.position);
-  ROS_DEBUG("found %lu frontiers", frontiers.size());
-  for (size_t i = 0; i < frontiers.size(); ++i) {
-    ROS_DEBUG("frontier %zd cost: %f", i, frontiers[i].cost);
-  }
+  rrt_detector_->getFrontiers();
+  visualizeFrontiers(rrt_detector_->frontiers());
+  rrt_detector_->chooseTarget();
+  Xplore::Frontier target = rrt_detector_->target();
+  target_state = target.state();
+  /////////////////////////////////////
+  // auto frontiers = search_.searchFrom(pose.position);
+  // ROS_DEBUG("found %lu frontiers", frontiers.size());
+  // for (size_t i = 0; i < frontiers.size(); ++i) {
+    // ROS_DEBUG("frontier %zd cost: %f", i, frontiers[i].cost);
+  // }
 
-  if (frontiers.empty()) {
-    stop();
-    return;
-  }
+  // if (frontiers.empty()) {
+    // stop();
+    // return;
+  // }
 
   // publish frontiers as visualization markers
-  if (visualize_) {
-    visualizeFrontiers(frontiers);
-  }
+  // if (visualize_) {
+    // visualizeFrontiers(frontiers);
+  // }
 
   // find non blacklisted frontier
-  auto frontier =
-      std::find_if_not(frontiers.begin(), frontiers.end(),
-                       [this](const frontier_exploration::Frontier& f) {
-                         return goalOnBlacklist(f.centroid);
-                       });
-  if (frontier == frontiers.end()) {
-    stop();
-    return;
-  }
-  geometry_msgs::Point target_position = frontier->centroid;
+  // auto frontier =
+  //     std::find_if_not(frontiers.begin(), frontiers.end(),
+  //                      [this](const frontier_exploration::Frontier& f) {
+  //                        return goalOnBlacklist(f.centroid);
+  //                      });
+  // if (frontier == frontiers.end()) {
+  //   stop();
+  //   return;
+  // }
 
-  // time out if we are not making any progress
-  bool same_goal = prev_goal_ == target_position;
-  prev_goal_ = target_position;
-  if (!same_goal || prev_distance_ > frontier->min_distance) {
-    // we have different goal or we made some progress
-    last_progress_ = ros::Time::now();
-    prev_distance_ = frontier->min_distance;
-  }
-  // black list if we've made no progress for a long time
-  if (ros::Time::now() - last_progress_ > progress_timeout_) {
-    frontier_blacklist_.push_back(target_position);
-    ROS_DEBUG("Adding current goal to black list");
-    makePlan();
-    return;
-  }
+  // geometry_msgs::Point target_position = frontier->centroid;
 
-  // we don't need to do anything if we still pursuing the same goal
-  if (same_goal) {
-    return;
-  }
+  // // time out if we are not making any progress
+  // bool same_goal = prev_goal_ == target_position;
+  // prev_goal_ = target_position;
+  // if (!same_goal || prev_distance_ > frontier->min_distance) {
+  //   // we have different goal or we made some progress
+  //   last_progress_ = ros::Time::now();
+  //   prev_distance_ = frontier->min_distance;
+  // }
+  // // black list if we've made no progress for a long time
+  // if (ros::Time::now() - last_progress_ > progress_timeout_) {
+  //   frontier_blacklist_.push_back(target_position);
+  //   ROS_DEBUG("Adding current goal to black list");
+  //   makePlan();
+  //   return;
+  // }
+
+  // // we don't need to do anything if we still pursuing the same goal
+  // if (same_goal) {
+  //   return;
+  // }
 
   // send goal to move_base if we have something new to pursue
   move_base_msgs::MoveBaseGoal goal;
-  goal.target_pose.pose.position = target_position;
+  int x_map = (int)(round(target_state.x()));
+  int y_map = (int)(round(target_state.y()));
+  float x, y;
+  costmap.mapToWorld(x_map, y_map, x, y);
+  goal.target_pose.pose.position.x = x;
+  goal.target_pose.pose.position.y = y;
+  goal.target_pose.pose.position.z = 0;
   goal.target_pose.pose.orientation.w = 1.;
   goal.target_pose.header.frame_id = costmap_client_.getGlobalFrameID();
   goal.target_pose.header.stamp = ros::Time::now();

@@ -2,6 +2,11 @@
 #define FRONTIER_SEARCH_H_
 
 #include <costmap_2d/costmap_2d.h>
+#include "frontier.h"
+#include "functions.h"
+#include "rrt.h"
+#include "state.h"
+#include "tree.h"
 
 namespace frontier_exploration
 {

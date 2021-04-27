@@ -50,6 +50,7 @@
 
 #include <explore/costmap_client.h>
 #include <explore/frontier_search.h>
+#include "rrt.h"
 
 namespace explore
 {
@@ -102,6 +103,11 @@ private:
   double prev_distance_;
   ros::Time last_progress_;
   size_t last_markers_count_;
+
+  Xplore::RRT* rrt_detector_;
+  Xplore::State curr_state;
+  Xplore::State target_state;
+
 
   // parameters
   double planner_frequency_;
