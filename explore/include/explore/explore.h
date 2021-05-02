@@ -77,8 +77,8 @@ private:
   /**
    * @brief  Publish a frontiers as markers
    */
-  void visualizeFrontiers(
-      const std::vector<frontier_exploration::Frontier>& frontiers);
+  // void visualizeFrontiers(
+      // const std::vector<frontier_exploration::Frontier>& frontiers);
 
   void reachedGoal(const actionlib::SimpleClientGoalState& status,
                    const move_base_msgs::MoveBaseResultConstPtr& result,
@@ -94,7 +94,7 @@ private:
   Costmap2DClient costmap_client_;
   actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>
       move_base_client_;
-  frontier_exploration::FrontierSearch search_;
+  // frontier_exploration::FrontierSearch search_;
   ros::Timer exploring_timer_;
   ros::Timer oneshot_;
 

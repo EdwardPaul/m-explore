@@ -3,6 +3,8 @@
 #include "state.h"
 #include <ros/ros.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <costmap_2d/cost_values.h>
+#include <costmap_2d/costmap_2d.h>
 
 float distance(const Xplore::State& first, const Xplore::State& second) {
     return pow((first.x() - second.x()) * (first.x() - second.x()) + 
